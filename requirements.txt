@@ -1,2 +1,3 @@
-requests
-argparse
+# No external python libraries required as we use standard libraries (urllib, subprocess, etc.)
+# However, if you want to use 'requests' for Shodan, uncomment below:
+# requests
