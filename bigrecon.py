@@ -14,15 +14,16 @@ class Colors:
     BOLD = '\033[1m'
     END = '\033[0m'
 
-BANNER = f"""{Colors.CYAN}{Colors.BOLD}
+# Using raw string for banner to avoid SyntaxWarning
+BANNER = r"""{color_cyan}{bold}
    ____  _       ____                            
   | __ )(_) __ _|  _ \ ___  ___ ___  _ __      
   |  _ \| |/ _` | |_) / _ \/ __/ _ \| '_ \     
   | |_) | | (_| |  _ <  __/ (_| (_) | | | |    
   |____/|_|\__, |_| \_\___|\___\___/|_| |_|    
            |___/                                
-{Colors.YELLOW}  >> Advanced Subdomain Enumeration & Filtering <<
-{Colors.END}"""
+{color_yellow}  >> Advanced Subdomain Enumeration & Filtering <<
+{color_end}""".format(color_cyan=Colors.CYAN, bold=Colors.BOLD, color_yellow=Colors.YELLOW, color_end=Colors.END)
 
 SHODAN_API_KEY = "Xk5QmB4c0gcsrh8oUvBjdduNbmM2wmBL"
 
@@ -70,9 +71,41 @@ def get_subdomains_shodan(domain):
 def filter_live_httpx(subdomains_file, output_file):
     """Run httpx for filtering and info extraction"""
     print(f"{Colors.BLUE}[*] Running httpx for filtering & data extraction...{Colors.END}")
-    # Extracting: status-code, content-length, ip, server, cname, title
-    cmd = f"httpx -l {subdomains_file} -silent -sc -cl -ip -sr -cname -title -o {output_file}"
+    # Run httpx with JSON output to parse it easily for custom formatting
+    json_output = "temp_httpx_results.json"
+    cmd = f"httpx -l {subdomains_file} -silent -sc -cl -ip -sr -cname -title -json -o {json_output}"
     run_command(cmd)
+    
+    if os.path.exists(json_output):
+        with open(json_output, 'r') as f_in, open(output_file, 'w') as f_out:
+            # Write Header
+            header = f"{'URL':<45} | {'STATUS':<6} | {'IP':<15} | {'SERVER':<15} | {'TITLE'}\n"
+            separator = "-" * 120 + "\n"
+            f_out.write(header)
+            f_out.write(separator)
+            
+            lines_processed = 0
+            for line in f_in:
+                try:
+                    data = json.loads(line)
+                    url = data.get('url', 'N/A')
+                    status = str(data.get('status-code', 'N/A'))
+                    ip = data.get('ip', 'N/A')
+                    server = data.get('webserver', 'N/A')
+                    title = data.get('title', 'N/A')
+                    
+                    # Clean title from newlines
+                    title = title.replace('\n', ' ').replace('\r', '').strip()
+                    
+                    # Format and write line
+                    formatted_line = f"{url:<45} | {status:<6} | {ip:<15} | {server:<15} | {title}\n"
+                    f_out.write(formatted_line)
+                    lines_processed += 1
+                except:
+                    continue
+        os.remove(json_output)
+        return lines_processed
+    return 0
 
 def main():
     print(BANNER)
@@ -102,17 +135,15 @@ def main():
             f.write(sub + "\n")
     
     # 2. Filtering & Info Extraction
-    filter_live_httpx(temp_subs_file, args.output)
+    live_count = filter_live_httpx(temp_subs_file, args.output)
     
     # 3. Cleanup and Final Report
     if os.path.exists(temp_subs_file):
         os.remove(temp_subs_file)
         
-    if os.path.exists(args.output):
-        with open(args.output, 'r') as f:
-            lines = f.readlines()
-            print(f"{Colors.GREEN}[+] Filtering Completed! Found {len(lines)} live subdomains.{Colors.END}")
-            print(f"{Colors.YELLOW}[*] Results saved in: {Colors.BOLD}{args.output}{Colors.END}")
+    if live_count > 0:
+        print(f"{Colors.GREEN}[+] Filtering Completed! Found {live_count} live subdomains.{Colors.END}")
+        print(f"{Colors.YELLOW}[*] Results saved in: {Colors.BOLD}{args.output}{Colors.END}")
     else:
         print(f"{Colors.RED}[!] No live subdomains found during filtering.{Colors.END}")
 
