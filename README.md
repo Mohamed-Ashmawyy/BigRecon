@@ -10,7 +10,6 @@
 - **Rich Data Extraction:** Automatically retrieves critical information:
   - **Status Codes** (200, 404, 500, etc. )
   - **Content-Length**
-  - **IP Addresses**
   - **Web Server Headers** (Apache, Nginx, Cloudflare, etc.)
   - **CNAME Records**
   - **Page Titles**
