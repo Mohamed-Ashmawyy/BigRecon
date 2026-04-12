@@ -1,0 +1,19 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Output and temporary files
+*.txt
+*.log
+*.tmp
+results/
+temp_all_subs.txt
+subs_subfinder.txt
+
+# Environment files
+.env
+venv/
+env/
+.vscode/
+.idea/
