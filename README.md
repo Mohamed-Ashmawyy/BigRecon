@@ -42,3 +42,8 @@ To use BigRecon, ensure the following tools are installed and available in your 
 Running a basic scan against a target domain:
 ```bash
 python3 bigrecon.py example.com
+```
+## To specify a custom output file:
+```bash
+python3 bigrecon.py example.com -o results.txt
+```
