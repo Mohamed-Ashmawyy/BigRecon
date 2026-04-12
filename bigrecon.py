@@ -66,20 +66,14 @@ def filter_live_httpx(subdomains_file, output_file):
     print(f"{Colors.BLUE}[*] Running httpx for filtering & data extraction...{Colors.END}")
     json_output = "temp_httpx_results.json"
     
-    # Improved httpx command:
-    # -sc: status-code
-    # -ip: host IP
-    # -server: server header
-    # -title: page title
-    # -json: output in JSON format for reliable parsing
-    # -follow-redirects: follow redirects to get final status/title
+    # httpx command to extract status, ip, server, title in JSON format
     cmd = f"httpx -l {subdomains_file} -silent -sc -ip -server -title -json -o {json_output} -follow-redirects"
     run_command(cmd)
     
     lines_processed = 0
     if os.path.exists(json_output):
         with open(json_output, 'r') as f_in, open(output_file, 'w') as f_out:
-            # Table Header with fixed widths
+            # Table Header
             header = f"{'URL':<50} | {'STATUS':<8} | {'IP':<16} | {'SERVER':<20} | {'TITLE'}\n"
             f_out.write(header)
             f_out.write("-" * 130 + "\n")
@@ -88,15 +82,16 @@ def filter_live_httpx(subdomains_file, output_file):
                 try:
                     data = json.loads(line)
                     url = data.get('url', 'N/A')
-                    # Use 'status_code' (underscore) as per httpx JSON output
+                    # Standard httpx JSON keys: 'status_code', 'host' (for IP), 'webserver', 'title'
                     status = str(data.get('status_code', data.get('status-code', 'N/A')))
-                    # Use 'host' or 'ip'
+                    
+                    # Fix: Priority for IP extraction
+                    # httpx JSON output puts the IP address in the 'host' field when -ip is used.
                     ip = data.get('host', data.get('ip', 'N/A'))
-                    # Use 'webserver' or 'server'
+                    
                     server = data.get('webserver', data.get('server', 'N/A'))
                     title = data.get('title', 'N/A').replace('\n', ' ').strip()
                     
-                    # Clean up URL to match the expected format (strip trailing slashes if any)
                     if url.endswith('/'):
                         url = url[:-1]
                         
@@ -114,10 +109,7 @@ def main():
     parser.add_argument("-o", "--output", default="bigrecon_results.txt", help="Output file name")
     args = parser.parse_args()
     
-    # Combine results from Subfinder and Shodan
-    subfinder_subs = get_subdomains_subfinder(args.domain)
-    shodan_subs = get_subdomains_shodan(args.domain)
-    all_subs = subfinder_subs.union(shodan_subs)
+    all_subs = get_subdomains_subfinder(args.domain).union(get_subdomains_shodan(args.domain))
     
     if not all_subs:
         print(f"{Colors.RED}[!] No subdomains found.{Colors.END}")
