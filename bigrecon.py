@@ -17,7 +17,7 @@ class Colors:
 BANNER = r"""{color_cyan}{bold}
    ____  _       ____                            
   | __ )(_) __ _|  _ \ ___  ___ ___  _ __      
-  |  _ \| |/ _` | |_) / _ \/ __/ _ \| 
+  |  _ \| |/ _` | |_) / _ \/ __/ _ \| itz_ \     
   | |_) | | (_| |  _ <  __/ (_| (_) | | | |    
   |____/|_|\__, |_| \_\___|\___\___/|_| |_|    
            |___/                                
@@ -27,24 +27,16 @@ BANNER = r"""{color_cyan}{bold}
 # Shodan API Key - Priority: Environment Variable > Hardcoded (Fallback)
 SHODAN_API_KEY = os.getenv("SHODAN_API_KEY", "Xk5QmB4c0gcsrh8oUvBjdduNbmM2wmBL")
 
-def check_dependencies():
-    """Check if required external tools are installed."""
-    missing = []
-    for tool in ["subfinder", "httpx", "assetfinder", "amass"]:
-        try:
-            # For amass, we check for 'amass enum' as 'amass -version' might not work directly
-            if tool == "amass":
-                subprocess.run([tool, "enum", "-h"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-            else:
-                subprocess.run([tool, "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            missing.append(tool)
-    
-    if missing:
-        print(f"{Colors.RED}[!] Missing dependencies: {", ".join(missing)}{Colors.END}")
-        print(f"{Colors.YELLOW}[*] Please run 'bash setup.sh' to install them.{Colors.END}")
+def check_tool(tool):
+    """Check if a tool is installed and available in PATH."""
+    try:
+        if tool == "amass":
+            subprocess.run([tool, "enum", "-h"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        else:
+            subprocess.run([tool, "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return False
-    return True
 
 def run_command(command):
     try:
@@ -56,6 +48,9 @@ def run_command(command):
         return ""
 
 def get_subdomains_subfinder(domain):
+    if not check_tool("subfinder"):
+        print(f"{Colors.YELLOW}[!] Subfinder not found. Skipping...{Colors.END}")
+        return set()
     print(f"{Colors.BLUE}[*] Running Subfinder for {domain}...{Colors.END}")
     output_file = f"subs_subfinder_{domain}.txt"
     run_command(f"subfinder -d {domain} -silent -o {output_file}")
@@ -67,13 +62,18 @@ def get_subdomains_subfinder(domain):
     return subs
 
 def get_subdomains_assetfinder(domain):
+    if not check_tool("assetfinder"):
+        # Silently skip if assetfinder is missing to keep it simple
+        return set()
     print(f"{Colors.BLUE}[*] Running Assetfinder for {domain}...{Colors.END}")
     output = run_command(f"assetfinder --subs-only {domain}")
     return {line.strip() for line in output.splitlines() if line.strip()}
 
 def get_subdomains_amass(domain):
+    if not check_tool("amass"):
+        # Silently skip if amass is missing to keep it simple
+        return set()
     print(f"{Colors.BLUE}[*] Running Amass for {domain}...{Colors.END}")
-    # Amass can be very verbose, so we'll try to get a clean list
     output_file = f"subs_amass_{domain}.txt"
     run_command(f"amass enum -d {domain} -o {output_file}")
     subs = set()
@@ -85,31 +85,36 @@ def get_subdomains_amass(domain):
 
 def get_subdomains_shodan(domain):
     if not SHODAN_API_KEY:
-        print(f"{Colors.YELLOW}[!] Shodan API Key not found. Skipping Shodan...{Colors.END}")
         return set()
         
     print(f"{Colors.BLUE}[*] Querying Shodan API for {domain}...{Colors.END}")
     subs = set()
     try:
-        import requests
+        # Using urllib instead of requests to avoid dependency issues on Kali
+        import urllib.request
+        import json
         url = f"https://api.shodan.io/dns/domain/{domain}?key={SHODAN_API_KEY}"
-        response = requests.get(url, timeout=15)
-        if response.status_code == 200:
-            data = response.json()
-            if 'subdomains' in data:
-                for sub in data['subdomains']:
-                    subs.add(f"{sub}.{domain}")
-        elif response.status_code == 401:
-            print(f"{Colors.RED}[!] Shodan API Key is invalid.{Colors.END}")
-    except Exception as e:
-        print(f"{Colors.RED}[!] Shodan Error: {e}{Colors.END}")
+        with urllib.request.urlopen(url, timeout=15) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode())
+                if 'subdomains' in data:
+                    for sub in data['subdomains']:
+                        subs.add(f"{sub}.{domain}")
+    except Exception:
+        pass
     return subs
 
 def filter_live_httpx(subdomains_file, output_file):
+    if not check_tool("httpx"):
+        print(f"{Colors.RED}[!] httpx not found. Cannot filter live hosts.{Colors.END}")
+        print(f"{Colors.YELLOW}[*] All found subdomains saved to: {output_file}{Colors.END}")
+        import shutil
+        shutil.copy(subdomains_file, output_file)
+        return 0
+        
     print(f"{Colors.BLUE}[*] Running httpx for filtering & data extraction...{Colors.END}")
     json_output = f"temp_httpx_{os.getpid()}.json"
     
-    # Improved httpx command for maximum results
     cmd = f"httpx -l {subdomains_file} -silent -sc -server -title -json -o {json_output} -follow-redirects -t 50"
     run_command(cmd)
     
@@ -140,9 +145,7 @@ def filter_live_httpx(subdomains_file, output_file):
 
 def main():
     print(BANNER)
-    if not check_dependencies():
-        sys.exit(1)
-        
+    
     parser = argparse.ArgumentParser(description="BigRecon - Advanced Subdomain Enumeration & Filtering")
     parser.add_argument("domain", help="Domain to scan (e.g., example.com)")
     parser.add_argument("-o", "--output", help="Output file name (default: domain_results.txt)")
@@ -150,6 +153,12 @@ def main():
     
     domain = args.domain
     output_file = args.output if args.output else f"{domain}_results.txt"
+    
+    # Check for core tools
+    if not check_tool("subfinder") and not check_tool("httpx"):
+        print(f"{Colors.RED}[!] Core tools (subfinder/httpx) are missing.{Colors.END}")
+        print(f"{Colors.YELLOW}[*] Please install them manually or try 'sudo apt install subfinder httpx-toolkit'{Colors.END}")
+        sys.exit(1)
     
     subfinder_subs = get_subdomains_subfinder(domain)
     assetfinder_subs = get_subdomains_assetfinder(domain)
@@ -176,7 +185,7 @@ def main():
         
     if live_count > 0:
         print(f"{Colors.GREEN}[+] Found {live_count} live hosts. Results saved to: {output_file}{Colors.END}")
-    else:
+    elif check_tool("httpx"):
         print(f"{Colors.RED}[!] No live hosts found.{Colors.END}")
 
 if __name__ == "__main__":
