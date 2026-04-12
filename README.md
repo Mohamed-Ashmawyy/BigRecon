@@ -1,4 +1,4 @@
-# BigRecon 🚀 (Updated Version)
+# BigRecon 🚀
 
 **BigRecon** is an advanced and high-performance subdomain enumeration and filtering tool, specifically designed for security researchers, penetration testers, and bug bounty hunters. This updated version streamlines the reconnaissance process by integrating multiple passive discovery sources with rapid HTTP probing and detailed data extraction, with improved security, performance, and ease of use.
 
