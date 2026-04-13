@@ -1,0 +1,26 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# BigRecon output files
+*_results.txt
+*.log
+*.tmp
+results/
+
+# Temp files created during scanning
+temp_all_subs.txt
+subs_subfinder.txt
+
+# Environment & secrets - NEVER upload API keys
+.env
+*.env
+
+# Virtual environments
+venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
