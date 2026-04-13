@@ -3,12 +3,15 @@
 **BigRecon** is an advanced, high-performance subdomain enumeration and filtering tool built for security researchers, penetration testers, and bug bounty hunters. It integrates multiple passive discovery sources with rapid HTTP probing and detailed data extraction.
 
 ---
+<img width="1718" height="146" alt="BigRecon" src="https://github.com/user-attachments/assets/1021e2e3-d13f-456f-9d0b-8089ee593eeb" />
+
+---
 
 ## 🌟 Features
 
 | Feature | Details |
 |---|---|
-| **Multi-Source Discovery** | Runs `subfinder`, `assetfinder`, and `amass` in parallel |
+| **Multi-Source Discovery** | Runs `subfinder`, `assetfinder`, and `crt.sh` in parallel |
 | **Shodan Integration** | Queries Shodan DNS API (requires `SHODAN_API_KEY`) |
 | **Live-Host Filtering** | Uses `httpx` to probe every subdomain for liveness |
 | **Rich Data Extraction** | Captures status code, web server header, and page title |
@@ -28,8 +31,8 @@
 |---|---|
 | [subfinder](https://github.com/projectdiscovery/subfinder) | ProjectDiscovery |
 | [assetfinder](https://github.com/tomnomnom/assetfinder) | tomnomnom |
-| [amass](https://github.com/owasp-amass/amass) | OWASP |
 | [httpx](https://github.com/projectdiscovery/httpx) | ProjectDiscovery |
+| [crt.sh](https://crt.sh) | Certificate Transparency (no install needed — pure HTTP) |
 
 ---
 
@@ -70,10 +73,11 @@ export SHODAN_API_KEY="YOUR_API_KEY_HERE"
 python3 bigrecon.py example.com
 ```
 
-> ⚠️ Never hard-code your API key in the script. Always use an environment variable.
-
 ---
 
+<img width="1718" height="529" alt="Screenshot_2026-04-13_19_05_22" src="https://github.com/user-attachments/assets/9a10b285-a91e-4712-afa0-12dc20aa279f" />
+
+---
 ## 📄 Output Format
 
 Results are saved as a structured text file:
@@ -93,10 +97,10 @@ https://dev.example.com                                      | 403      | Apache
 Domain Input
      │
      ▼
-┌────────────────────────────────────────────┐
-│        Parallel Discovery Phase            │
-│  subfinder │ assetfinder │ amass │ shodan  │
-└────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│           Parallel Discovery Phase              │
+│  subfinder │ assetfinder │ crt.sh │ shodan      │
+└─────────────────────────────────────────────────┘
      │
      ▼
   Deduplicate subdomains
