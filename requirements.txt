@@ -1,0 +1,17 @@
+# BigRecon has no external Python dependencies.
+# All functionality uses Python 3 standard library modules:
+#   - os, sys, subprocess   → running external tools
+#   - argparse              → CLI argument parsing
+#   - json                  → parsing httpx and crt.sh output
+#   - logging               → terminal messages
+#   - tempfile, shutil      → temp file management
+#   - urllib.request        → crt.sh and Shodan HTTP requests
+#   - concurrent.futures    → parallel tool execution
+
+# External tools (installed via setup.sh, not pip):
+#   - subfinder     → passive subdomain enumeration
+#   - assetfinder   → passive subdomain enumeration
+#   - httpx         → live host probing (also known as httpx-toolkit on Kali)
+#
+# crt.sh is queried directly over HTTP — no installation needed.
+# Shodan requires a free API key: https://account.shodan.io/
